@@ -1,0 +1,75 @@
+#!/bin/bash
+
+set -e;
+
+# Clone the repo or pull from remote if
+# already exists
+function hgpullclone () {
+    remote_repo=$1
+    local_co=$2
+    if [ -d "$local_co" ]; then
+        hg pull "$remote_repo" -R "$local_co" > /dev/null
+    else
+        hg clone "$remote_repo" "$local_co" > /dev/null
+    fi
+}
+
+# Clone the repo or pull from remote if
+# already exists
+function gitpullclone () {
+    remote_repo=$1
+    local_co=$2
+    if [ -d "$local_co" ]; then
+        pushd "$local_co" > /dev/null
+        git pull "$remote_repo" master &> /dev/null
+        popd > /dev/null
+    else
+        git clone "$remote_repo" "$local_co" &> /dev/null
+    fi
+}
+
+if [ 1 != $# -a 2 != $# ]; then
+    echo "usage: $0 bitbucket_username [github_username]";
+    exit 1;
+fi
+
+bbusername=$1
+if [ -z "$2" ]; then
+    ghusername=$bbusername;
+else
+    ghusername=$2;
+fi
+
+repourl="https://api.bitbucket.org/1.0/users/$bbusername/"
+
+json=`curl --silent --show-error $repourl`
+repos=`echo "$json"|python -c '
+import sys;
+import json; 
+d=json.load(sys.stdin); 
+for r in d["repositories"]:
+    print "%s,%s" % (r["slug"],r["scm"])
+'`
+
+codir="/tmp"
+for repo in $repos; do
+    reponame=`echo $repo|cut -d ',' -f 1`
+    scm=`echo $repo|cut -d ',' -f 2`
+    echo -n "Mirroring $reponame via $scm... "
+    repourl="https://bitbucket.org/$bbusername/$reponame"
+    repodir="$codir/$reponame"
+    if [ 'hg' = "$scm" ]; then
+        hgpullclone "$repourl" "$repodir"
+        hg push "git+ssh://git@github.com/$ghusername/$reponame" -R "$repodir" > /dev/null
+        echo "done";
+    elif [ 'git' = "$scm" ]; then
+        gitpullclone "$repourl" "$repodir"
+        pushd "$repodir" > /dev/null
+        git push "ssh://git@github.com/$ghusername/$reponame.git" &> /dev/null
+        popd > /dev/null
+        echo "done";
+    else
+        echo "skipped, can't handle scm $scm";
+    fi
+done
+

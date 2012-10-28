@@ -1,0 +1,15 @@
+
+bb2gh - Light weight mirroring of your public bitbucket projects to github
+
+
+All you need is:
+* curl
+* git (with your ssh key configured)
+* hg (only if you hg bitbucket repos)
+
+
+usage:
+> bb2gh bitbucket-user-name [github-user-name]
+
+Note that for the sake of repo identification, github user names are case sensative.
+
