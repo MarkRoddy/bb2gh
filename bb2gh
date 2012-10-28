@@ -40,6 +40,10 @@ else
     ghusername=$2;
 fi
 
+if [ '-l' = "$bbusername" ]; then
+    bbusername=$ghusername
+fi
+
 repourl="https://api.bitbucket.org/1.0/users/$bbusername/"
 
 json=`curl --silent --show-error $repourl`
@@ -50,6 +54,16 @@ d=json.load(sys.stdin);
 for r in d["repositories"]:
     print "%s,%s" % (r["slug"],r["scm"])
 '`
+
+# Just list the bitbucket repos
+if [ "-l" = "$1" ]; then
+    for repo in $repos; do
+        reponame=`echo $repo|cut -d ',' -f 1`
+        scm=`echo $repo|cut -d ',' -f 2`
+        echo "$reponame ($scm)"
+    done
+    exit 0;
+fi
 
 codir="/tmp"
 for repo in $repos; do
