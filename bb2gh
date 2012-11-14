@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e;
-
 # Clone the repo or pull from remote if
 # already exists
 function hgpullclone () {
@@ -79,7 +77,14 @@ for repo in $repos; do
     elif [ 'git' = "$scm" ]; then
         gitpullclone "$repourl" "$repodir"
         pushd "$repodir" > /dev/null
-        git push "ssh://git@github.com/$ghusername/$reponame.git" &> /dev/null
+        git push "ssh://git@github.com/$ghusername/$reponame.git" &> /tmp/bb2gh-git-output
+        if [ $? != 0 ]; then
+            echo ""; # throw a new line due to '-n' used above
+            cat /tmp/bb2gh-git-output
+            rm /tmp/bb2gh-git-output
+            exit 1;
+        fi
+        rm /tmp/bb2gh-git-output
         popd > /dev/null
         echo "done";
     else
